@@ -1,0 +1,120 @@
+name: Event Booking CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      template_version: ${{ steps.template_version.outputs.version }}
+      template_tag: ${{ steps.template_version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Validate template version
+        id: template_version
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [[ -n "${BASE_SHA}" ]]; then
+            python3 scripts/check-template-version.py --base-ref "${BASE_SHA}"
+          else
+            python3 scripts/check-template-version.py
+          fi
+      - name: Read Dex CLI baseline
+        id: dex-cli
+        shell: bash
+        run: echo "revision=$(cat DEX_CLI_BASELINE)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        with:
+          repository: superdurable/dex
+          ref: ${{ steps.dex-cli.outputs.revision }}
+          path: upstream-dex
+          fetch-depth: 0
+      - name: Validate released Dex Server baseline
+        shell: bash
+        run: |
+          server_revision="$(git -C upstream-dex rev-parse "$(cat DEX_SERVER_BASELINE)^{commit}")"
+          git -C upstream-dex merge-base --is-ancestor "${server_revision}" HEAD
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: upstream-dex/cli/go.mod
+          cache-dependency-path: |
+            go.sum
+            tools/openapi/go.sum
+            upstream-dex/cli/go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.22.0
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            upstream-dex/web/package-lock.json
+      - name: Install Temporal CLI 1.9.1
+        run: |
+          curl --fail --silent --show-error --location \
+            https://github.com/temporalio/cli/releases/download/v1.9.1/temporal_cli_1.9.1_linux_amd64.tar.gz \
+            --output /tmp/temporal-cli.tar.gz
+          echo "09a0326a51db84d02735e53542b9ebd8c4758daf47482a9ab0abce15844e60d5  /tmp/temporal-cli.tar.gz" | sha256sum --check
+          mkdir -p "$HOME/.local/bin"
+          tar -xzf /tmp/temporal-cli.tar.gz -C "$HOME/.local/bin" temporal
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/temporal" --version
+      - name: Build pinned Dex CLI
+        run: |
+          npm --prefix upstream-dex/web ci
+          npm --prefix upstream-dex/web run check
+          npm --prefix upstream-dex/web run build
+          mkdir -p "$HOME/.local/bin"
+          GOWORK=off go build -C upstream-dex/cli -trimpath -o "$HOME/.local/bin/dexcli" ./cmd/dexcli
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Install Playwright Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: Check template
+        run: make check
+
+  release:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TEMPLATE_VERSION: ${{ needs.check.outputs.template_version }}
+      TEMPLATE_TAG: ${{ needs.check.outputs.template_tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Publish immutable template release
+        run: |
+          set -euo pipefail
+          existing_commit="$(git ls-remote --tags origin "refs/tags/${TEMPLATE_TAG}" "refs/tags/${TEMPLATE_TAG}^{}" | awk '$2 ~ /\^\{\}$/ { peeled=$1 } $2 !~ /\^\{\}$/ { direct=$1 } END { print peeled ? peeled : direct }')"
+          if [[ -n "${existing_commit}" && "${existing_commit}" != "${GITHUB_SHA}" ]]; then
+            echo "${TEMPLATE_TAG} already points to ${existing_commit}, not ${GITHUB_SHA}" >&2
+            exit 1
+          fi
+          if gh release view "${TEMPLATE_TAG}" >/dev/null 2>&1; then
+            echo "${TEMPLATE_TAG} is already published for ${GITHUB_SHA}"
+            exit 0
+          fi
+          if [[ -n "${existing_commit}" ]]; then
+            gh release create "${TEMPLATE_TAG}" \
+              --verify-tag \
+              --title "Event Booking ${TEMPLATE_VERSION}" \
+              --generate-notes
+          else
+            gh release create "${TEMPLATE_TAG}" \
+              --target "${GITHUB_SHA}" \
+              --title "Event Booking ${TEMPLATE_VERSION}" \
+              --generate-notes
+          fi

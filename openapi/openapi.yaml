@@ -1,0 +1,325 @@
+openapi: 3.0.3
+info:
+  title: Event Registration API
+  version: 1.0.0
+paths:
+  /api/health:
+    get:
+      operationId: getHealth
+      responses:
+        '200':
+          description: Application is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /api/event:
+    get:
+      operationId: getEvent
+      responses:
+        '200':
+          description: Public event configuration and availability.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventView'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/registrations:
+    post:
+      operationId: createRegistration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRegistrationRequest'
+      responses:
+        '202':
+          description: Registration accepted for durable capacity reservation and Checkout creation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/registrations/{registrationId}:
+    parameters:
+      - $ref: '#/components/parameters/RegistrationId'
+    get:
+      operationId: getRegistration
+      parameters:
+        - $ref: '#/components/parameters/RegistrationAuthorization'
+      responses:
+        '200':
+          description: Current durable registration status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationView'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/tickets/{registrationId}:
+    parameters:
+      - $ref: '#/components/parameters/RegistrationId'
+    get:
+      operationId: getTicket
+      parameters:
+        - $ref: '#/components/parameters/TicketToken'
+      responses:
+        '200':
+          description: Paid electronic ticket details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketView'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/tickets/{registrationId}/qr.png:
+    parameters:
+      - $ref: '#/components/parameters/RegistrationId'
+    get:
+      operationId: getTicketQR
+      parameters:
+        - $ref: '#/components/parameters/TicketToken'
+      responses:
+        '200':
+          description: PNG QR code containing the opaque ticket URL.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/check-in:
+    post:
+      operationId: checkInTicket
+      parameters:
+        - $ref: '#/components/parameters/StaffAuthorization'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckInRequest'
+      responses:
+        '200':
+          description: Ticket check-in result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckInView'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+components:
+  parameters:
+    RegistrationId:
+      name: registrationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RegistrationAuthorization:
+      name: X-Registration-Token
+      in: header
+      required: true
+      description: Access token returned when the registration is created.
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]{32,}$'
+    StaffAuthorization:
+      name: X-Staff-Token
+      in: header
+      required: true
+      description: Token held by authorized check-in staff.
+      schema:
+        type: string
+        pattern: '^.{16,}$'
+    TicketToken:
+      name: token
+      in: query
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]{32,}$'
+  schemas:
+    RegistrationState:
+      type: string
+      enum:
+        - reserving
+        - capacity_full
+        - checkout_creating
+        - payment_pending
+        - payment_failed
+        - payment_expired
+        - payment_review_required
+        - paid
+        - ticket_sending
+        - ticket_ready
+        - ticket_email_review_required
+        - checked_in
+    PaymentStatus:
+      type: string
+      enum: [not_started, pending, failed, expired, review_required, paid]
+    TicketStatus:
+      type: string
+      enum: [not_available, sending, ready, email_review_required, checked_in]
+    EmailDeliveryStatus:
+      type: string
+      enum: [not_started, sending, sent, failed, unknown]
+    CheckInResult:
+      type: string
+      enum: [checked_in, already_checked_in]
+    EventView:
+      type: object
+      additionalProperties: false
+      required: [id, name, description, dateTimeDisplay, location, priceDisplay, capacity, reservedCount, registrationOpen, registrationDeadlineDisplay, organizerEmail]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        description: {type: string}
+        dateTimeDisplay: {type: string}
+        location: {type: string}
+        priceDisplay: {type: string}
+        capacity: {type: integer, format: int64, minimum: 1}
+        reservedCount: {type: integer, format: int64, minimum: 0}
+        registrationOpen: {type: boolean}
+        registrationDeadlineDisplay: {type: string}
+        organizerEmail: {type: string, format: email}
+    CreateRegistrationRequest:
+      type: object
+      additionalProperties: false
+      required: [firstName, lastName, email, acceptedPolicies]
+      properties:
+        firstName: {type: string, minLength: 1, maxLength: 80}
+        lastName: {type: string, minLength: 1, maxLength: 80}
+        email: {type: string, format: email, maxLength: 254}
+        acceptedPolicies: {type: boolean, enum: [true]}
+    RegistrationCreated:
+      type: object
+      additionalProperties: false
+      required: [registrationId, displayCode, accessToken, statusUrl, state]
+      properties:
+        registrationId: {type: string, format: uuid}
+        displayCode: {type: string}
+        accessToken: {type: string}
+        statusUrl: {type: string, format: uri}
+        state: {$ref: '#/components/schemas/RegistrationState'}
+    RegistrationView:
+      type: object
+      additionalProperties: false
+      required: [registrationId, displayCode, attendeeName, emailMasked, state, paymentStatus, ticketStatus, emailDeliveryStatus, message]
+      properties:
+        registrationId: {type: string, format: uuid}
+        displayCode: {type: string}
+        attendeeName: {type: string}
+        emailMasked: {type: string}
+        state: {$ref: '#/components/schemas/RegistrationState'}
+        paymentStatus: {$ref: '#/components/schemas/PaymentStatus'}
+        ticketStatus: {$ref: '#/components/schemas/TicketStatus'}
+        emailDeliveryStatus: {$ref: '#/components/schemas/EmailDeliveryStatus'}
+        message: {type: string}
+        checkoutUrl: {type: string, format: uri}
+        ticketUrl: {type: string, format: uri}
+        checkedInAt: {type: string, format: date-time}
+    TicketView:
+      type: object
+      additionalProperties: false
+      required: [registrationId, displayCode, attendeeName, eventName, dateTimeDisplay, location, qrImageUrl, emailDeliveryStatus, checkedIn]
+      properties:
+        registrationId: {type: string, format: uuid}
+        displayCode: {type: string}
+        attendeeName: {type: string}
+        eventName: {type: string}
+        dateTimeDisplay: {type: string}
+        location: {type: string}
+        qrImageUrl: {type: string, format: uri}
+        emailDeliveryStatus: {$ref: '#/components/schemas/EmailDeliveryStatus'}
+        checkedIn: {type: boolean}
+        checkedInAt: {type: string, format: date-time}
+    CheckInRequest:
+      type: object
+      additionalProperties: false
+      required: [ticketCode]
+      properties:
+        ticketCode: {type: string, minLength: 1, maxLength: 3000}
+    CheckInView:
+      type: object
+      additionalProperties: false
+      required: [result, registrationId, displayCode, attendeeName, checkedInAt, message]
+      properties:
+        result: {$ref: '#/components/schemas/CheckInResult'}
+        registrationId: {type: string, format: uuid}
+        displayCode: {type: string}
+        attendeeName: {type: string}
+        checkedInAt: {type: string, format: date-time}
+        message: {type: string}
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: {type: string, enum: [ok]}
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error, message]
+      properties:
+        error: {type: string, pattern: '^[a-z][a-z0-9_]*$'}
+        message: {type: string, maxLength: 3000}
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorResponse'}
+    Unauthorized:
+      description: Missing or invalid authorization.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorResponse'}
+    NotFound:
+      description: Registration or ticket not found.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorResponse'}
+    Conflict:
+      description: Request conflicts with durable registration state.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorResponse'}
+    Unavailable:
+      description: A required durable or provider operation is unavailable.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorResponse'}

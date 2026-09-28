@@ -1,0 +1,11 @@
+/bin/
+/tmp/
+/.local/
+/web/dist/
+/web/node_modules/
+/web/playwright-report/
+/web/test-results/
+__pycache__/
+*.log
+/go.work
+/go.work.sum
