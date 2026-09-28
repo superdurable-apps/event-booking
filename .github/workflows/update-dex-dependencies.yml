@@ -29,6 +29,11 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.22.0
+          cache: npm
+          cache-dependency-path: web/package-lock.json
       - name: Resolve latest stable Dex releases
         id: releases
         shell: bash
@@ -69,6 +74,8 @@ jobs:
       - name: Refresh locks and validate the template contract
         if: steps.update.outputs.changed == 'true'
         run: |
+          make bootstrap
+          make generate
           go mod tidy
           git add \
             .superverse/template.json \

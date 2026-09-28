@@ -14,7 +14,7 @@ The participant registration, payment-status, ticket, and staff scanning pages u
 
 ## Local development
 
-The repository pins Dex Server/CLI `v0.14.0`, Dex Go SDK `v0.13.1`, Stripe connector `v0.1.0`, and Gmail connector `v0.11.1`.
+The repository uses the basic-process template `v1.7.2` as its upgrade base, then advances the application stack to Dex Server/CLI `v0.14.2`. It pins Dex Go SDK `v0.13.1`, Stripe connector `v0.2.0`, Gmail connector `v0.13.0`, and Connector SDK `v0.9.0`.
 
 ```sh
 make bootstrap
@@ -25,6 +25,22 @@ make dev
 `make dev` expects `dexcli` on `PATH`. The app defaults to the local Dex Server at `127.0.0.1:8801` and serves on `http://127.0.0.1:8080`.
 
 Without `DEX_CONNECTOR_CONFIG_FILE`, non-production startup uses non-routable connector endpoints so the UI and Flow graphs can be inspected safely. Provider calls will enter `needs_attention`. Configure the released connectors through Dex Web for an actual development payment/email test.
+
+## Connector authentication in Dex Web
+
+Start the pinned local Dex stack with a persistent connector directory, then open Dex Web's **Connections** view. The Flow graph declares the two named connections and the Stripe trigger binding used by this application:
+
+- `event-payments` uses Stripe `v0.2.0`. Its setup screen links to the Stripe Dashboard and explains how to enter a restricted or secret API key plus the matching `whsec_` webhook signing secret.
+- `event-tickets` uses Gmail `v0.13.0`. Its setup screen shows the exact OAuth redirect URI and guides Google Cloud project, Gmail API, consent-screen, test-user, and Web application client setup. This release uses Google's canonical `userinfo.email` scope, so reconnect a credential created with Gmail `v0.11.1` or earlier.
+- `event-registration-payments` is the Stripe `checkoutSessionUpdated` trigger binding. Point the Stripe webhook endpoint at `/connectors/stripe/webhook` on the application's public HTTPS base URL.
+
+After saving the connections, start the application with the configuration path displayed by Dex Web:
+
+```sh
+DEX_CONNECTOR_CONFIG_FILE=/absolute/path/to/connections.json make dev
+```
+
+The local file contains plaintext development credentials. Never commit, upload, or log it. Gmail's local OAuth token is short-lived and must be reauthorized after it expires.
 
 ## Configuration
 

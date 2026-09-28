@@ -9,3 +9,4 @@
 /web/test-results/
 __pycache__/
 *.log
+.DS_STORE

@@ -13,7 +13,7 @@ import (
 	"time"
 
 	api "github.com/superdurable-apps/event-booking/internal/api"
-	appRuntime "github.com/superdurable-apps/event-booking/internal/runtime"
+	"github.com/superdurable-apps/event-booking/internal/apphost"
 )
 
 func main() {
@@ -25,20 +25,20 @@ func main() {
 
 func run() error {
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	runtime, err := appRuntime.New(logger)
+	host, err := apphost.New(logger)
 	if err != nil {
 		return err
 	}
-	defer runtime.Close()
-	apiHandler, err := api.NewHandler(runtime.Registrations)
+	defer host.Close()
+	apiHandler, err := api.NewHandler(host.Registrations)
 	if err != nil {
 		return fmt.Errorf("create OpenAPI handler: %w", err)
 	}
-	server := &http.Server{Addr: ":" + environment("PORT", "8080"), Handler: applicationHandler(apiHandler, runtime.StripeWebhook), ReadHeaderTimeout: 5 * time.Second}
-	runtimeResult := runtime.Start()
+	server := &http.Server{Addr: ":" + environment("PORT", "8080"), Handler: applicationHandler(apiHandler, host.StripeWebhook), ReadHeaderTimeout: 5 * time.Second}
+	hostResult := host.Start()
 	initializeContext, initializeCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer initializeCancel()
-	if err := ensureEvent(initializeContext, runtime.EnsureEvent); err != nil {
+	if err := ensureEvent(initializeContext, host.EnsureEvent); err != nil {
 		return fmt.Errorf("initialize event inventory: %w", err)
 	}
 	serverResult := make(chan error, 1)
@@ -47,7 +47,7 @@ func run() error {
 	defer stop()
 	select {
 	case <-ctx.Done():
-	case err := <-runtimeResult:
+	case err := <-hostResult:
 		if err != nil {
 			return fmt.Errorf("run Dex runtime: %w", err)
 		}

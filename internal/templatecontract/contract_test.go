@@ -29,13 +29,13 @@ func TestTemplateContract(t *testing.T) {
 	if err := json.Unmarshal(manifestBytes, &contract); err != nil {
 		t.Fatalf("decode manifest: %v", err)
 	}
-	if contract.SchemaVersion != 1 || contract.BuildProfile != "go-react-v1" || contract.TemplateVersion != "1.7.0" || contract.MinimumSandboxImageContractRevision != 3 {
+	if contract.SchemaVersion != 1 || contract.BuildProfile != "go-react-v1" || contract.TemplateVersion != "1.7.3" || contract.MinimumSandboxImageContractRevision != 3 {
 		t.Fatalf("unexpected template identity: %+v", contract)
 	}
-	if baseline := strings.TrimSpace(readFile(t, filepath.Join(root, "DEX_SERVER_BASELINE"))); baseline != "server/v0.14.0" {
+	if baseline := strings.TrimSpace(readFile(t, filepath.Join(root, "DEX_SERVER_BASELINE"))); baseline != "server/v0.14.2" {
 		t.Fatalf("unexpected Dex Server baseline: %q", baseline)
 	}
-	if baseline := strings.TrimSpace(readFile(t, filepath.Join(root, "DEX_CLI_BASELINE"))); baseline != "cli-v0.14.0" {
+	if baseline := strings.TrimSpace(readFile(t, filepath.Join(root, "DEX_CLI_BASELINE"))); baseline != "cli-v0.14.2" {
 		t.Fatalf("unexpected Dex CLI baseline: %q", baseline)
 	}
 	goModule := readFile(t, filepath.Join(root, "go.mod"))

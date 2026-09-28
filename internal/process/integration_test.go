@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/superdurable-apps/event-booking/internal/apphost"
 	"github.com/superdurable-apps/event-booking/internal/process"
-	appRuntime "github.com/superdurable-apps/event-booking/internal/runtime"
 )
 
 func TestRegistrationACHWebhookTicketEmailAndAtomicCheckIn(t *testing.T) {
@@ -57,42 +57,42 @@ func TestRegistrationACHWebhookTicketEmailAndAtomicCheckIn(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	runtime := startRuntime(t, ctx)
+	host := startApplicationHost(t, ctx)
 	defer func() {
-		if err := runtime.Close(); err != nil {
-			t.Errorf("close runtime: %v", err)
+		if err := host.Close(); err != nil {
+			t.Errorf("close application host: %v", err)
 		}
 	}()
 
-	first, err := runtime.Registrations.StartRegistration(ctx, process.NewRegistration{
+	first, err := host.Registrations.StartRegistration(ctx, process.NewRegistration{
 		RequestID: uuid.New(), FirstName: "Ada", LastName: "Lovelace", Email: "ada@example.com", AcceptedAt: time.Now().UTC(),
 	})
 	if err != nil {
 		t.Fatalf("start first registration: %v", err)
 	}
-	first = waitForRegistration(t, ctx, runtime, first.RegistrationToken, process.StatusCheckoutReady)
+	first = waitForRegistration(t, ctx, host, first.RegistrationToken, process.StatusCheckoutReady)
 	if !strings.HasPrefix(first.CheckoutURL, "https://checkout.stripe.test/") {
 		t.Fatalf("checkout URL = %q", first.CheckoutURL)
 	}
 
-	second, err := runtime.Registrations.StartRegistration(ctx, process.NewRegistration{
+	second, err := host.Registrations.StartRegistration(ctx, process.NewRegistration{
 		RequestID: uuid.New(), FirstName: "Grace", LastName: "Hopper", Email: "grace@example.com", AcceptedAt: time.Now().UTC(),
 	})
 	if err != nil {
 		t.Fatalf("start second registration: %v", err)
 	}
-	waitForRegistration(t, ctx, runtime, second.RegistrationToken, process.StatusSoldOut)
+	waitForRegistration(t, ctx, host, second.RegistrationToken, process.StatusSoldOut)
 
 	registrationID := flowIDFromToken(t, first.RegistrationToken)
 	webhookBody := fmt.Sprintf(`{"id":"evt_paid_1","object":"event","type":"checkout.session.async_payment_succeeded","created":%d,"data":{"object":{"id":"cs_%s","object":"checkout.session","url":"https://checkout.stripe.test/%s","client_reference_id":"%s","payment_status":"paid","status":"complete","payment_intent":"pi_paid_1","currency":"usd","amount_total":7500,"metadata":{"registration_id":"%s","event_id":"default"}}}}`, time.Now().Unix(), strings.TrimPrefix(registrationID, "registration-"), registrationID, registrationID, registrationID)
-	postSignedWebhook(t, ctx, runtime.StripeWebhook, webhookBody, "whsec_integration")
-	first = waitForRegistration(t, ctx, runtime, first.RegistrationToken, process.StatusTicketEmailed)
+	postSignedWebhook(t, ctx, host.StripeWebhook, webhookBody, "whsec_integration")
+	first = waitForRegistration(t, ctx, host, first.RegistrationToken, process.StatusTicketEmailed)
 	if gmailSends.Load() != 1 {
 		t.Fatalf("Gmail sends = %d, want 1", gmailSends.Load())
 	}
 
 	ticketToken := ticketTokenFromURL(t, first.TicketURL)
-	ticket, err := runtime.Registrations.GetTicket(ctx, ticketToken)
+	ticket, err := host.Registrations.GetTicket(ctx, ticketToken)
 	if err != nil {
 		t.Fatalf("get paid ticket: %v", err)
 	}
@@ -100,24 +100,24 @@ func TestRegistrationACHWebhookTicketEmailAndAtomicCheckIn(t *testing.T) {
 		t.Fatalf("unexpected ticket: %#v", ticket)
 	}
 	checkedAt := time.Now().UTC().Truncate(time.Millisecond)
-	checked, err := runtime.Registrations.CheckIn(ctx, ticketToken, checkedAt)
+	checked, err := host.Registrations.CheckIn(ctx, ticketToken, checkedAt)
 	if err != nil || checked.Status != "checked_in" {
 		t.Fatalf("first check-in = %#v, %v", checked, err)
 	}
-	duplicate, err := runtime.Registrations.CheckIn(ctx, ticketToken, checkedAt.Add(time.Minute))
+	duplicate, err := host.Registrations.CheckIn(ctx, ticketToken, checkedAt.Add(time.Minute))
 	if err != nil || duplicate.Status != "already_checked_in" || !duplicate.CheckedInAt.Equal(checked.CheckedInAt) {
 		t.Fatalf("duplicate check-in = %#v, %v", duplicate, err)
 	}
 }
 
-func startRuntime(t *testing.T, ctx context.Context) *appRuntime.Runtime {
+func startApplicationHost(t *testing.T, ctx context.Context) *apphost.Host {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	runtime, err := appRuntime.New(logger)
+	host, err := apphost.New(logger)
 	if err != nil {
-		t.Fatalf("create runtime: %v", err)
+		t.Fatalf("create application host: %v", err)
 	}
-	result := runtime.Start()
+	result := host.Start()
 	deadline := time.NewTimer(15 * time.Second)
 	defer deadline.Stop()
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -130,19 +130,19 @@ func startRuntime(t *testing.T, ctx context.Context) *appRuntime.Runtime {
 		}
 		select {
 		case err := <-result:
-			t.Fatalf("start runtime: %v", err)
+			t.Fatalf("start application host: %v", err)
 		case <-deadline.C:
 			t.Fatalf("wait for Worker listener: %v", dialErr)
 		case <-ticker.C:
 		}
 	}
-	if err := runtime.EnsureEvent(ctx); err != nil {
+	if err := host.EnsureEvent(ctx); err != nil {
 		t.Fatalf("ensure event: %v", err)
 	}
-	return runtime
+	return host
 }
 
-func waitForRegistration(t *testing.T, ctx context.Context, runtime *appRuntime.Runtime, token string, status process.RegistrationStatus) process.RegistrationView {
+func waitForRegistration(t *testing.T, ctx context.Context, host *apphost.Host, token string, status process.RegistrationStatus) process.RegistrationView {
 	t.Helper()
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
@@ -150,7 +150,7 @@ func waitForRegistration(t *testing.T, ctx context.Context, runtime *appRuntime.
 	var lastErr error
 	for {
 		attempt, cancel := context.WithTimeout(ctx, time.Second)
-		last, lastErr = runtime.Registrations.GetRegistration(attempt, token)
+		last, lastErr = host.Registrations.GetRegistration(attempt, token)
 		cancel()
 		if lastErr == nil && last.Status == status {
 			return last

@@ -1,4 +1,4 @@
-package runtime
+package apphost
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	"github.com/superdurable/dex/sdk-go/dex"
 )
 
-type Runtime struct {
+type Host struct {
 	Registrations *process.Service
 	StripeWebhook http.Handler
 	worker        *dex.Worker
@@ -27,7 +27,7 @@ type Runtime struct {
 	triggerCancel context.CancelFunc
 }
 
-func New(logger *slog.Logger) (*Runtime, error) {
+func New(logger *slog.Logger) (*Host, error) {
 	connectors, err := loadConnectors(logger)
 	if err != nil {
 		return nil, err
@@ -79,31 +79,31 @@ func New(logger *slog.Logger) (*Runtime, error) {
 		return nil, errors.Join(fmt.Errorf("create Stripe webhook: %w", err), client.Close(), worker.Stop(context.Background()), cache.Close())
 	}
 	service := process.NewService(client, registrationFlow, tokens, environment("PUBLIC_BASE_URL", "http://127.0.0.1:8080"))
-	return &Runtime{
+	return &Host{
 		Registrations: service, StripeWebhook: webhook, worker: worker, client: client, cache: cache, stripeTrigger: trigger,
 	}, nil
 }
 
-func (runtime *Runtime) Start() <-chan error {
+func (host *Host) Start() <-chan error {
 	result := make(chan error, 2)
 	triggerContext, cancel := context.WithCancel(context.Background())
-	runtime.triggerCancel = cancel
-	go func() { result <- runtime.worker.Start() }()
-	go runTrigger(triggerContext, runtime.stripeTrigger, result)
+	host.triggerCancel = cancel
+	go func() { result <- host.worker.Start() }()
+	go runTrigger(triggerContext, host.stripeTrigger, result)
 	return result
 }
 
-func (runtime *Runtime) EnsureEvent(ctx context.Context) error {
-	return runtime.Registrations.EnsureEvent(ctx, EventConfigFromEnvironment())
+func (host *Host) EnsureEvent(ctx context.Context) error {
+	return host.Registrations.EnsureEvent(ctx, EventConfigFromEnvironment())
 }
 
-func (runtime *Runtime) Close() error {
-	if runtime.triggerCancel != nil {
-		runtime.triggerCancel()
+func (host *Host) Close() error {
+	if host.triggerCancel != nil {
+		host.triggerCancel()
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return errors.Join(runtime.worker.Stop(ctx), runtime.client.Close(), runtime.cache.Close())
+	return errors.Join(host.worker.Stop(ctx), host.client.Close(), host.cache.Close())
 }
 
 func EventConfigFromEnvironment() process.EventConfig {
