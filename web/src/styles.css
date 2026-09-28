@@ -1,0 +1,108 @@
+:root {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #202124;
+  background: #f6f6f3;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+a { color: #214f79; }
+button, input { font: inherit; }
+button:disabled { cursor: not-allowed; opacity: .55; }
+
+.site-shell { width: min(1040px, calc(100% - 40px)); margin: 0 auto; }
+.site-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 72px; border-bottom: 1px solid #c9c9c4; }
+.site-name { color: #202124; font-size: 1rem; font-weight: 700; text-decoration: none; }
+nav { display: flex; flex-wrap: wrap; gap: 18px; }
+nav a { color: #4a4b4d; font-size: .9rem; text-decoration: none; }
+main { padding: 64px 0 80px; }
+footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px 0 44px; border-top: 1px solid #c9c9c4; color: #686a6d; font-size: .82rem; }
+
+h1 { max-width: 760px; margin: 10px 0 16px; font-size: clamp(2.4rem, 6vw, 4.6rem); line-height: 1; letter-spacing: -.04em; }
+h2 { margin: 0 0 18px; font-size: 1.25rem; }
+p { line-height: 1.55; }
+.eyebrow { margin: 0; color: #686a6d; font-size: .72rem; font-weight: 700; letter-spacing: .14em; }
+.hero { max-width: 850px; margin-bottom: 58px; }
+.lede { max-width: 660px; color: #585a5d; font-size: 1.1rem; }
+.page-heading { max-width: 760px; margin-bottom: 34px; }
+.page-heading h1 { font-size: clamp(2.2rem, 5vw, 3.8rem); }
+.page-heading p:last-child { color: #585a5d; }
+
+.panel, .ticket-card { padding: 26px; border: 1px solid #b7b8b5; background: #fff; }
+.two-column { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 18px 0; }
+.steps-panel { margin-top: 18px; }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.steps li { min-height: 120px; padding: 18px; border: 1px dashed #9b9c98; }
+.steps span, .steps strong, .steps small { display: block; }
+.steps span { margin-bottom: 18px; color: #686a6d; font-size: .78rem; }
+.steps small { margin-top: 8px; color: #686a6d; }
+
+.details-list { margin: 0; }
+.details-list div { display: grid; grid-template-columns: 150px 1fr; gap: 14px; padding: 12px 0; border-bottom: 1px solid #e2e2de; }
+.details-list div:last-child { border-bottom: 0; }
+.details-list dt { color: #686a6d; font-size: .84rem; }
+.details-list dd { margin: 0; font-weight: 600; }
+.placeholder-box, .camera-placeholder, .qr-placeholder { display: grid; place-items: center; border: 1px dashed #858681; background: #f2f2ef; color: #55575a; text-align: center; }
+.placeholder-box { min-height: 150px; }
+.placeholder-box.compact { min-height: 80px; }
+
+.primary-actions, .secondary-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin-top: 28px; }
+.secondary-actions { justify-content: space-between; }
+.button, button { display: inline-block; padding: 12px 18px; border: 1px solid #202124; background: #202124; color: #fff; font-weight: 700; text-decoration: none; cursor: pointer; }
+.button.secondary { background: #fff; color: #202124; }
+.button.disabled { pointer-events: none; opacity: .5; }
+.text-link, .back-link { font-weight: 600; }
+.back-link { display: inline-block; margin-top: 24px; }
+
+.form-panel { max-width: 760px; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.field { display: grid; gap: 8px; color: #4e5052; font-size: .84rem; font-weight: 700; }
+.field:last-child { grid-column: 1 / -1; }
+.field input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #9fa09c; background: #fff; }
+.checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin: 24px 0; font-size: .9rem; }
+.checkbox-row input { width: 18px; height: 18px; margin: 0; }
+.form-summary { margin: 22px 0; border-top: 1px solid #d6d6d2; border-bottom: 1px solid #d6d6d2; }
+.form-summary div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; }
+.form-note, .security-note { color: #686a6d; font-size: .84rem; }
+.notice { max-width: 760px; margin: 18px 0 0; padding: 13px 15px; border: 1px solid #9fa09c; background: #fff; }
+.notice.error { border-color: #9b4b4b; color: #762d2d; background: #fff8f8; }
+.availability-number { font-size: 3.3rem; font-weight: 700; letter-spacing: -.04em; }
+
+.payment-layout { display: grid; grid-template-columns: 1fr .9fr; gap: 34px; }
+.handoff-box { display: grid; align-content: start; gap: 16px; }
+.handoff-box small { color: #686a6d; line-height: 1.45; }
+
+.ticket-card { display: grid; grid-template-columns: 1fr 300px; gap: 34px; }
+.status-label { display: inline-block; margin-bottom: 18px; padding: 6px 9px; border: 1px solid #777975; color: #4b4d4f; font-size: .76rem; font-weight: 700; }
+.qr-placeholder { min-height: 300px; }
+.qr-code { display: grid; place-items: center; min-height: 300px; border: 1px solid #b7b8b5; background: #fff; }
+.qr-code img { display: block; width: min(100%, 320px); height: auto; image-rendering: pixelated; }
+.qr-placeholder span, .qr-placeholder small, .camera-placeholder span, .camera-placeholder small { display: block; }
+.qr-placeholder small, .camera-placeholder small { max-width: 220px; margin-top: 8px; color: #686a6d; }
+
+.check-in-layout { align-items: start; }
+.camera-placeholder { min-height: 280px; margin-bottom: 18px; }
+.camera-placeholder video { width: 100%; min-height: 280px; object-fit: cover; }
+.check-in-layout .field { margin-bottom: 18px; }
+.result-placeholder { display: grid; gap: 8px; margin-top: 24px; padding: 18px; border: 1px dashed #858681; background: #f2f2ef; }
+.result-placeholder span { color: #686a6d; font-size: .85rem; line-height: 1.45; }
+.result-placeholder.success { border-style: solid; border-color: #39714b; background: #f4fbf6; }
+
+code { padding: 2px 5px; background: #ecece8; font-size: .9em; }
+
+@media print {
+  .site-header, footer, .primary-actions, .security-note { display: none; }
+  .site-shell { width: 100%; }
+  main { padding: 0; }
+  .ticket-card { border: 0; }
+}
+
+@media (max-width: 760px) {
+  .site-header, footer { align-items: flex-start; flex-direction: column; padding: 20px 0; }
+  main { padding-top: 42px; }
+  .two-column, .steps, .payment-layout, .ticket-card, .form-grid { grid-template-columns: 1fr; }
+  .field:last-child { grid-column: auto; }
+  .qr-placeholder { min-height: 240px; }
+  .details-list div { grid-template-columns: 1fr; gap: 5px; }
+}
