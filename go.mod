@@ -8,9 +8,9 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/ogen-go/ogen v1.24.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
-	github.com/superdurable/dex-connectors-library/connectors/google/gmail v0.13.0
-	github.com/superdurable/dex-connectors-library/connectors/stripe v0.2.0
-	github.com/superdurable/dex-connectors-library/sdkgo v0.9.0
+	github.com/superdurable/dex-connectors-library/connectors/google/gmail v0.14.0
+	github.com/superdurable/dex-connectors-library/connectors/stripe v0.2.2
+	github.com/superdurable/dex-connectors-library/sdkgo v0.14.2
 	github.com/superdurable/dex/blob-cache-go v0.1.0
 	github.com/superdurable/dex/sdk-go v0.13.1
 	go.opentelemetry.io/otel v1.46.0

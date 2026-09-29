@@ -14,7 +14,7 @@ The participant registration, payment-status, ticket, and staff scanning pages u
 
 ## Local development
 
-The repository uses the basic-process template `v1.7.2` as its upgrade base, then advances the application stack to Dex Server/CLI `v0.14.2`. It pins Dex Go SDK `v0.13.1`, Stripe connector `v0.2.0`, Gmail connector `v0.13.0`, and Connector SDK `v0.9.0`.
+The repository uses the basic-process template `v1.8.0` as its upgrade base. It pins Dex Server/CLI `v0.14.2`, Dex Go SDK `v0.13.1`, Stripe connector `v0.2.2`, Gmail connector `v0.14.0`, and Connector SDK `v0.14.2`.
 
 ```sh
 make bootstrap
@@ -30,8 +30,8 @@ Without `DEX_CONNECTOR_CONFIG_FILE`, non-production startup uses non-routable co
 
 Start the pinned local Dex stack with a persistent connector directory, then open Dex Web's **Connections** view. The Flow graph declares the two named connections and the Stripe trigger binding used by this application:
 
-- `event-payments` uses Stripe `v0.2.0`. Its setup screen links to the Stripe Dashboard and explains how to enter a restricted or secret API key plus the matching `whsec_` webhook signing secret.
-- `event-tickets` uses Gmail `v0.13.0`. Its setup screen shows the exact OAuth redirect URI and guides Google Cloud project, Gmail API, consent-screen, test-user, and Web application client setup. This release uses Google's canonical `userinfo.email` scope, so reconnect a credential created with Gmail `v0.11.1` or earlier.
+- `event-payments` uses Stripe `v0.2.2`. Its setup screen links to the Stripe Dashboard and explains how to enter a restricted or secret API key plus the matching `whsec_` webhook signing secret.
+- `event-tickets` uses Gmail `v0.14.0`. Its setup screen shows the exact OAuth redirect URI and guides Google Cloud project, Gmail API, consent-screen, test-user, and Web application client setup. This release uses Google's canonical `userinfo.email` scope, so reconnect a credential created with Gmail `v0.11.1` or earlier.
 - `event-registration-payments` is the Stripe `checkoutSessionUpdated` trigger binding. Point the Stripe webhook endpoint at `/connectors/stripe/webhook` on the application's public HTTPS base URL.
 
 After saving the connections, start the application with the configuration path displayed by Dex Web:
@@ -58,6 +58,13 @@ Event details remain TBD and are environment-configurable:
 | `EVENT_CAPACITY` | `300` |
 | `EVENT_REGISTRATION_OPEN` | `true` |
 | `PUBLIC_BASE_URL` | `http://127.0.0.1:8080` |
+
+For a hosted deployment, Superverse mounts the exact connector configuration
+revision named by `SUPERVERSE_CONNECTOR_CONFIG_FILE`, verifies its digest before
+startup, and injects the internal credential broker URL plus a private workload
+credential file. The application reads non-secret Stripe/Gmail configuration
+from that snapshot; provider credentials are resolved per operation from the
+broker and are never copied into the release artifacts.
 
 Production additionally requires:
 

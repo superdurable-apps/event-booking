@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "superverse.dev/dex-app/v1",
+  "application": {
+    "port": 8080,
+    "healthPath": "/healthz"
+  },
+  "flowDefinitions": [
+    {
+      "sourcePath": "internal/process/inventory.go"
+    },
+    {
+      "sourcePath": "internal/process/registration.go"
+    }
+  ],
+  "connectors": [
+    {
+      "connectionName": "event-tickets",
+      "connectorId": "gmail",
+      "version": "v0.14.0",
+      "authMethodId": "google-oauth",
+      "operations": [
+        "sendMessage"
+      ]
+    },
+    {
+      "connectionName": "event-payments",
+      "connectorId": "stripe",
+      "version": "v0.2.2",
+      "authMethodId": "default",
+      "operations": [
+        "checkoutSessionUpdated",
+        "createACHCheckoutSession",
+        "getCheckoutSession"
+      ]
+    }
+  ]
+}
