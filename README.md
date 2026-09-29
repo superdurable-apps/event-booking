@@ -14,7 +14,7 @@ The participant registration, payment-status, ticket, and staff scanning pages u
 
 ## Local development
 
-The repository uses the basic-process template `v1.8.0` as its upgrade base. It pins Dex Server/CLI `v0.14.2`, Dex Go SDK `v0.13.1`, Stripe connector `v0.2.2`, Gmail connector `v0.14.0`, and Connector SDK `v0.14.2`.
+The repository uses the basic-process template `v1.8.1` as its upgrade base. It pins Dex Server/CLI `v0.14.2`, Dex Go SDK `v0.13.1`, Stripe connector `v0.2.2`, Gmail connector `v0.14.0`, and Connector SDK `v0.14.2`.
 
 ```sh
 make bootstrap

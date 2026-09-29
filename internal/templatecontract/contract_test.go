@@ -30,7 +30,7 @@ func TestTemplateContract(t *testing.T) {
 	if err := json.Unmarshal(manifestBytes, &contract); err != nil {
 		t.Fatalf("decode manifest: %v", err)
 	}
-	if contract.SchemaVersion != 1 || contract.BuildProfile != "go-react-v1" || contract.TemplateVersion != "1.8.0" || contract.MinimumSandboxImageContractRevision != 3 {
+	if contract.SchemaVersion != 1 || contract.BuildProfile != "go-react-v1" || contract.TemplateVersion != "1.8.1" || contract.MinimumSandboxImageContractRevision != 3 {
 		t.Fatalf("unexpected template identity: %+v", contract)
 	}
 	if baseline := strings.TrimSpace(readFile(t, filepath.Join(root, "DEX_SERVER_BASELINE"))); baseline != "server/v0.14.2" {
