@@ -113,7 +113,7 @@ func loadHosted(configurationFile string, requiresConnections bool) (Configurati
 		return Configuration{}, fmt.Errorf("SUPERVERSE_CONNECTOR_BROKER_URL is required")
 	}
 	if brokerURL != "" {
-		if _, err := validatedHTTPURL("SUPERVERSE_CONNECTOR_BROKER_URL", false); err != nil {
+		if _, err := validatedCredentialBrokerURL(); err != nil {
 			return Configuration{}, err
 		}
 	}
@@ -247,6 +247,20 @@ func validatedHTTPURL(name string, allowHTTP bool) (string, error) {
 	}
 	if parsed.Scheme != "https" && (!allowHTTP || parsed.Scheme != "http") {
 		return "", fmt.Errorf("%s must use HTTPS", name)
+	}
+	return strings.TrimRight(value, "/"), nil
+}
+
+func validatedCredentialBrokerURL() (string, error) {
+	const name = "SUPERVERSE_CONNECTOR_BROKER_URL"
+	value := strings.TrimSpace(os.Getenv(name))
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", fmt.Errorf("%s must be an absolute URL without credentials, query, or fragment", name)
+	}
+	hostname := strings.ToLower(parsed.Hostname())
+	if parsed.Scheme != "https" && (parsed.Scheme != "http" || !strings.HasSuffix(hostname, ".svc.cluster.local")) {
+		return "", fmt.Errorf("%s must use HTTPS or an internal Kubernetes service URL", name)
 	}
 	return strings.TrimRight(value, "/"), nil
 }

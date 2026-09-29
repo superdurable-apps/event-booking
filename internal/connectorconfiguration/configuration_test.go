@@ -54,6 +54,54 @@ func TestLoadValidatesAHostedSnapshotAndCredentialBoundary(t *testing.T) {
 	}
 }
 
+func TestLoadAllowsAnInternalKubernetesCredentialBroker(t *testing.T) {
+	clearConfigurationEnvironment(t)
+	directory := t.TempDir()
+	configurationFile := filepath.Join(directory, "connections.json")
+	credentialFile := filepath.Join(directory, "workload-token")
+	contents := []byte(`{"connections":[]}`)
+	if err := os.WriteFile(configurationFile, contents, 0o600); err != nil {
+		t.Fatalf("write configuration: %v", err)
+	}
+	if err := os.WriteFile(credentialFile, []byte("opaque-token"), 0o600); err != nil {
+		t.Fatalf("write workload credential: %v", err)
+	}
+	digest := sha256.Sum256(contents)
+	t.Setenv("SUPERVERSE_CONNECTOR_CONFIG_FILE", configurationFile)
+	t.Setenv("SUPERVERSE_CONNECTOR_CONFIG_DIGEST", hex.EncodeToString(digest[:]))
+	t.Setenv("SUPERVERSE_CONNECTOR_BROKER_URL", "http://connector-broker.superverse-system.svc.cluster.local:8091/")
+	t.Setenv("SUPERVERSE_CONNECTOR_WORKLOAD_CREDENTIAL_FILE", credentialFile)
+	t.Setenv("PUBLIC_BASE_URL", "http://staging-project.local.invalid")
+
+	if _, err := Load(true); err != nil {
+		t.Fatalf("load hosted configuration with an internal broker: %v", err)
+	}
+}
+
+func TestLoadRejectsAPlaintextExternalCredentialBroker(t *testing.T) {
+	clearConfigurationEnvironment(t)
+	directory := t.TempDir()
+	configurationFile := filepath.Join(directory, "connections.json")
+	credentialFile := filepath.Join(directory, "workload-token")
+	contents := []byte(`{"connections":[]}`)
+	if err := os.WriteFile(configurationFile, contents, 0o600); err != nil {
+		t.Fatalf("write configuration: %v", err)
+	}
+	if err := os.WriteFile(credentialFile, []byte("opaque-token"), 0o600); err != nil {
+		t.Fatalf("write workload credential: %v", err)
+	}
+	digest := sha256.Sum256(contents)
+	t.Setenv("SUPERVERSE_CONNECTOR_CONFIG_FILE", configurationFile)
+	t.Setenv("SUPERVERSE_CONNECTOR_CONFIG_DIGEST", hex.EncodeToString(digest[:]))
+	t.Setenv("SUPERVERSE_CONNECTOR_BROKER_URL", "http://connector-broker.example.test:8091/")
+	t.Setenv("SUPERVERSE_CONNECTOR_WORKLOAD_CREDENTIAL_FILE", credentialFile)
+	t.Setenv("PUBLIC_BASE_URL", "https://application.example.test")
+
+	if _, err := Load(true); err == nil || err.Error() != "SUPERVERSE_CONNECTOR_BROKER_URL must use HTTPS or an internal Kubernetes service URL" {
+		t.Fatalf("expected plaintext external broker rejection, got %v", err)
+	}
+}
+
 func TestLoadFailsClosedWhenTheHostedDigestDoesNotMatch(t *testing.T) {
 	clearConfigurationEnvironment(t)
 	configurationFile := filepath.Join(t.TempDir(), "connections.json")
