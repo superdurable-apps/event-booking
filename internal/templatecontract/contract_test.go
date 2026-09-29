@@ -15,6 +15,7 @@ type manifest struct {
 	TemplateVersion                     string            `json:"templateVersion"`
 	MinimumSandboxImageContractRevision int               `json:"minimumSandboxImageContractRevision"`
 	OpenAPISpec                         string            `json:"openapiSpec"`
+	ApplicationManifest                 string            `json:"applicationManifest"`
 	AgentInstructions                   string            `json:"agentInstructions"`
 	Commands                            map[string]string `json:"commands"`
 }
@@ -29,7 +30,7 @@ func TestTemplateContract(t *testing.T) {
 	if err := json.Unmarshal(manifestBytes, &contract); err != nil {
 		t.Fatalf("decode manifest: %v", err)
 	}
-	if contract.SchemaVersion != 1 || contract.BuildProfile != "go-react-v1" || contract.TemplateVersion != "1.7.3" || contract.MinimumSandboxImageContractRevision != 3 {
+	if contract.SchemaVersion != 1 || contract.BuildProfile != "go-react-v1" || contract.TemplateVersion != "1.8.0" || contract.MinimumSandboxImageContractRevision != 3 {
 		t.Fatalf("unexpected template identity: %+v", contract)
 	}
 	if baseline := strings.TrimSpace(readFile(t, filepath.Join(root, "DEX_SERVER_BASELINE"))); baseline != "server/v0.14.2" {
@@ -42,7 +43,7 @@ func TestTemplateContract(t *testing.T) {
 	if !strings.Contains(goModule, "github.com/superdurable/dex/sdk-go v0.13.1") {
 		t.Fatal("template must pin Dex Go SDK v0.13.1")
 	}
-	for _, path := range []string{contract.OpenAPISpec, contract.AgentInstructions} {
+	for _, path := range []string{contract.OpenAPISpec, contract.ApplicationManifest, contract.AgentInstructions} {
 		if _, err := os.Stat(filepath.Join(root, path)); err != nil {
 			t.Errorf("manifest path %q: %v", path, err)
 		}
@@ -59,15 +60,16 @@ func TestTemplateContract(t *testing.T) {
 		t.Error("AGENTS.md must require the installed dex-app-builder skill")
 	}
 	expectedCommands := map[string]string{
-		"bootstrap":       "make bootstrap",
-		"generate":        "make generate",
-		"checkFdgV2":      "make check-fdg-v2",
-		"testUnit":        "make test-unit",
-		"testIntegration": "make test-integration",
-		"testE2E":         "make test-e2e",
-		"build":           "make build",
-		"dev":             "make dev",
-		"check":           "make check",
+		"bootstrap":        "make bootstrap",
+		"generate":         "make generate",
+		"checkFdgV2":       "make check-fdg-v2",
+		"releaseArtifacts": "make superverse-release-artifacts",
+		"testUnit":         "make test-unit",
+		"testIntegration":  "make test-integration",
+		"testE2E":          "make test-e2e",
+		"build":            "make build",
+		"dev":              "make dev",
+		"check":            "make check",
 	}
 	if len(contract.Commands) != len(expectedCommands) {
 		t.Fatalf("unexpected template commands: %+v", contract.Commands)

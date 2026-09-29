@@ -9,10 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/superdurable-apps/event-booking/internal/connectorconfiguration"
 	"github.com/superdurable-apps/event-booking/internal/process"
 	gmail "github.com/superdurable/dex-connectors-library/connectors/google/gmail"
 	stripe "github.com/superdurable/dex-connectors-library/connectors/stripe"
 	"github.com/superdurable/dex-connectors-library/sdkgo"
+	"github.com/superdurable/dex-connectors-library/sdkgo/hostedconfig"
 	"github.com/superdurable/dex-connectors-library/sdkgo/localconfig"
 	"github.com/superdurable/dex/sdk-go/dex"
 )
@@ -21,10 +23,14 @@ type connectorBundle struct {
 	stripeConnection stripe.Connection
 	gmailConnection  gmail.Connection
 	store            *localconfig.Store
+	hosted           *connectorconfiguration.Configuration
 	logger           *slog.Logger
 }
 
 func loadConnectors(logger *slog.Logger) (*connectorBundle, error) {
+	if strings.TrimSpace(os.Getenv("SUPERVERSE_CONNECTOR_CONFIG_FILE")) != "" {
+		return loadHostedConnectors(logger)
+	}
 	if path := strings.TrimSpace(os.Getenv(localconfig.EnvironmentVariable)); path != "" {
 		store, err := localconfig.LoadFile(path)
 		if err != nil {
@@ -77,6 +83,66 @@ func loadConnectors(logger *slog.Logger) (*connectorBundle, error) {
 	}
 	logger.Warn("connector configuration is absent; provider calls use non-routable development endpoints")
 	return &connectorBundle{stripeConnection: stripeConnection, gmailConnection: gmailConnection, logger: logger}, nil
+}
+
+func loadHostedConnectors(logger *slog.Logger) (*connectorBundle, error) {
+	configuration, err := connectorconfiguration.Load(true)
+	if err != nil {
+		return nil, fmt.Errorf("load hosted connector configuration: %w", err)
+	}
+	stripeConfiguration := stripe.DefaultConfig()
+	if err := configuration.DecodeConnectionConfiguration(
+		stripe.ConnectorID, process.StripeConnectionName, &stripeConfiguration,
+	); err != nil {
+		return nil, fmt.Errorf("load hosted Stripe configuration: %w", err)
+	}
+	stripeCredentials, err := hostedconfig.NewCredentialProviderFromEnvironment(
+		stripe.ConnectorID, process.StripeConnectionName, stripe.DecodeResolvedCredentialsJSON,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create hosted Stripe credential provider: %w", err)
+	}
+	stripeClient, err := stripe.New(stripeConfiguration, stripeCredentials)
+	if err != nil {
+		return nil, fmt.Errorf("create hosted Stripe connector: %w", err)
+	}
+	stripeConnection, err := stripe.NewConnection(
+		stripeClient,
+		sdkgo.ConnectionRef{Provider: "stripe", Name: process.StripeConnectionName},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create hosted Stripe connection: %w", err)
+	}
+
+	gmailConfiguration := gmail.DefaultConfig()
+	if err := configuration.DecodeConnectionConfiguration(
+		gmail.ConnectorID, process.GmailConnectionName, &gmailConfiguration,
+	); err != nil {
+		return nil, fmt.Errorf("load hosted Gmail configuration: %w", err)
+	}
+	gmailCredentials, err := hostedconfig.NewCredentialProviderFromEnvironment(
+		gmail.ConnectorID, process.GmailConnectionName, gmail.DecodeResolvedCredentialsJSON,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create hosted Gmail credential provider: %w", err)
+	}
+	gmailClient, err := gmail.New(gmailConfiguration, gmailCredentials, gmail.WithLogger(logger))
+	if err != nil {
+		return nil, fmt.Errorf("create hosted Gmail connector: %w", err)
+	}
+	gmailConnection, err := gmail.NewConnection(
+		gmailClient,
+		sdkgo.ConnectionRef{Provider: "google", Name: process.GmailConnectionName},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create hosted Gmail connection: %w", err)
+	}
+	return &connectorBundle{
+		stripeConnection: stripeConnection,
+		gmailConnection:  gmailConnection,
+		hosted:           &configuration,
+		logger:           logger,
+	}, nil
 }
 
 func (bundle *connectorBundle) stripeWebhookHandler() (http.Handler, error) {
@@ -145,6 +211,16 @@ func (bundle *connectorBundle) stripeTrigger(client *dex.Client, flow *process.R
 			return nil, err
 		}
 		target = durableTarget
+	} else if bundle.hosted != nil {
+		if err := bundle.hosted.DecodeTriggerConfiguration(
+			stripe.ConnectorID,
+			process.StripeConnectionName,
+			"checkoutSessionUpdated",
+			process.StripeTriggerBindingName,
+			&configuration,
+		); err != nil {
+			return nil, err
+		}
 	}
 	return stripe.NewCheckoutSessionUpdatedTrigger(stripe.CheckoutSessionUpdatedTriggerConfig{
 		Connection: bundle.stripeConnection, ConnectionName: process.StripeConnectionName, BindingName: process.StripeTriggerBindingName,

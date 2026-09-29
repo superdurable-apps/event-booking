@@ -1,6 +1,6 @@
 SHELL := /usr/bin/env bash
 
-.PHONY: bootstrap generate check-fdg-v2 test-unit test-integration test-e2e build dev check
+.PHONY: bootstrap generate check-fdg-v2 superverse-release-artifacts test-unit test-integration test-e2e build dev check
 bootstrap:
 	go mod download
 	go -C tools/openapi mod download
@@ -9,9 +9,12 @@ generate:
 	./scripts/generate-openapi.sh
 check-fdg-v2:
 	./scripts/check-fdg-v2.sh
+superverse-release-artifacts:
+	@test -n "$(SUPERVERSE_RELEASE_ARTIFACT_DIR)" || { echo "SUPERVERSE_RELEASE_ARTIFACT_DIR is required" >&2; exit 1; }
+	python3 ./scripts/generate-release-artifacts.py --output-directory "$(SUPERVERSE_RELEASE_ARTIFACT_DIR)"
 test-unit: generate
 	go test ./...
-	python3 -m unittest scripts/test_check_template_version.py scripts/test_generate_openapi.py
+	python3 -m unittest scripts/test_check_template_version.py scripts/test_generate_openapi.py scripts/test_generate_release_artifacts.py
 	npm --prefix web test
 test-integration: generate
 	./scripts/with-dex.sh go test -tags=integration ./...
@@ -27,7 +30,7 @@ check: bootstrap generate check-fdg-v2
 	go mod tidy -diff
 	go vet ./...
 	go test ./...
-	python3 -m unittest scripts/test_check_template_version.py scripts/test_generate_openapi.py
+	python3 -m unittest scripts/test_check_template_version.py scripts/test_generate_openapi.py scripts/test_generate_release_artifacts.py
 	npm --prefix web test
 	./scripts/with-dex.sh go test -tags=integration ./...
 	./scripts/with-dex.sh ./scripts/run-e2e.sh
