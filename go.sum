@@ -51,8 +51,8 @@ github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWD
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 github.com/superdurable/dex-connectors-library/connectors/google/gmail v0.14.0 h1:VN/32Tx1bg8emAMt6LQG/R9wBavc/Q7EYqTkjTSO+0Y=
 github.com/superdurable/dex-connectors-library/connectors/google/gmail v0.14.0/go.mod h1:MgG1skFzEydZZWHzY5ANvl4xyAoR66WKmnGnOBZLrDE=
-github.com/superdurable/dex-connectors-library/connectors/stripe v0.2.1 h1:Lns0b0BUjNmD4nXC9JABY/aXA3ql8dl9HUpB5bggoBU=
-github.com/superdurable/dex-connectors-library/connectors/stripe v0.2.1/go.mod h1:/6IuiRw63fk5He4H7JlwFhKoeFN8VS5q4dLEaSmQWr8=
+github.com/superdurable/dex-connectors-library/connectors/stripe v0.2.2 h1:+PG1ktDLxlLoRbb2nwdEgL7CcEey4uju/FlawSgXn2c=
+github.com/superdurable/dex-connectors-library/connectors/stripe v0.2.2/go.mod h1:/6IuiRw63fk5He4H7JlwFhKoeFN8VS5q4dLEaSmQWr8=
 github.com/superdurable/dex-connectors-library/sdkgo v0.14.2 h1:JY/0XEVhF0mPgwhi0MfvrOcp81IF5VQwiXtKXwWc3Qw=
 github.com/superdurable/dex-connectors-library/sdkgo v0.14.2/go.mod h1:ZGVySwhgQZgJCwH8lK+bWUGnowvCVFxcwz2xvX4pULw=
 github.com/superdurable/dex/blob-cache-go v0.1.0 h1:+c3H5YBWG3DlICOHbgT9IUM5vTlfLYGP5Vd5sWr7WTY=
